@@ -67,7 +67,7 @@ type: entities
 
 A digital sensor and monitoring system for aquariums and ponds.
 
-Alpha quality component currently but low risk, as it's pretty simple, so it should get upgrade quickly. Built on top of another module of mine, [pyseneye](https://github.com/mcclown/pyseneye).
+Alpha quality component but low risk, as it's pretty simple. With some testing it should be beta quality shortly. Built on top of another module of mine, [pyseneye](https://github.com/mcclown/pyseneye).
 
 * Support for these devices by plugging them in directly to the device that is running Home-Assistant. No need for a machine running the Seneye Connect App, or the Seneye Web Server.
 * Support for pH, NH3 and temperature readings, support will be added for light reading shortly for Seneye Reef devices.
