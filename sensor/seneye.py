@@ -182,4 +182,4 @@ class SeneyeData:
 
             self.data[sensor] = getattr(resp, sensor, None)
 
-        _LOGGER.("Got Seneye data")
+        _LOGGER.debug("Got Seneye data")
