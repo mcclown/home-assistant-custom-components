@@ -2,6 +2,9 @@
 Support for the Seneye range of aquarium and pond sensors.
 For more details about this platform, please refer to the documentation at
 https://github.com/mcclown/home-assistant-custom-components
+
+This custom component is based on the Awair component in HA.
+https://github.com/home-assistant/home-assistant/blob/dev/homeassistant/components/sensor/awair.py
 """
 
 from datetime import timedelta
@@ -18,6 +21,8 @@ _LOGGER = logging.getLogger(__name__)
 
 ATTR_TIMESTAMP = 'timestamp'
 ATTR_LAST_SLIDE_READ = 'last_slide_update'
+ATTR_SENEYE_DEVICE_TYPE = 'seneye_device_type'
+
 
 DEVICE_CLASS_PH = 'PH'
 DEVICE_CLASS_FREE_AMMONIA = 'NH3'
@@ -37,21 +42,17 @@ SENSOR_TYPES = {
             'icon': 'mdi:alpha-n-box-outline'}
 }
 
+
 SCAN_INTERVAL = timedelta(minutes=5)
 SENEYE_SLIDE_READ_INTERVAL = timedelta(minutes=30)
 
 async def async_setup_platform(hass, config, async_add_entities,
                                discovery_info=None):
-    """Connect to the Seneye device."""
-    from pyseneye.sud import SUDevice, Action, DeviceType
+    """Setup Seneye objects"""
 
     try:
 
-        device = SUDevice()
-        data = device.action(Action.ENTER_INTERACTIVE_MODE)
-        device_type = data.device_type
-
-        seneye_data = SeneyeData(device, SENEYE_SLIDE_READ_INTERVAL)
+        seneye_data = SeneyeData(SENEYE_SLIDE_READ_INTERVAL)
         
         await seneye_data.async_update()
         
@@ -93,7 +94,7 @@ class SeneyeSensor(Entity):
     @property
     def device_class(self):
         """Return the device class."""
-        return self._device_class
+        return self._device_class   
 
     @property
     def icon(self):
@@ -107,14 +108,17 @@ class SeneyeSensor(Entity):
 
     @property
     def device_state_attributes(self):
-        """Return additional attributes."""
+        """Return additional attributes, preprocess before returning."""
         raw_dt = self._data.attrs[ATTR_LAST_SLIDE_READ]
 
         # Convert timestamp to local time, then format it.
         local_dt = dt.as_local(raw_dt)
         formatted_dt = local_dt.strftime("%Y-%m-%d %H:%M:%S")
+
+        seneye_device_type = self._data.attrs[ATTR_SENEYE_DEVICE_TYPE]
        
-        return { ATTR_LAST_SLIDE_READ: formatted_dt }
+        return {ATTR_LAST_SLIDE_READ: formatted_dt, 
+                ATTR_SENEYE_DEVICE_TYPE: seneye_device_type}
 
     @property
     def available(self):
@@ -147,26 +151,35 @@ class SeneyeSensor(Entity):
 class SeneyeData:
     """Get data from Seneye device."""
 
-    def __init__(self, device, throttle):
+    def __init__(self, throttle):
         """Initialize the data object."""
-        self._device = device
         self.data = {}
         self.attrs = {}
         self.async_update = Throttle(throttle)(self._async_update)
 
     async def _async_update(self):
-        """Get the data from Awair API."""
-        from pyseneye.sud import Action
+        """Get the data from SUD."""
+        from pyseneye.sud import SUDevice, Action, DeviceType
+        
+        device = SUDevice()
+        device_type = None
+        resp = None
+        try:
+            data = device.action(Action.ENTER_INTERACTIVE_MODE)
+            device_type = data.device_type.name
 
-        resp = self._device.action(Action.SENSOR_READING)
+            resp = device.action(Action.SENSOR_READING)
+            if not resp:
+                return
 
-        if not resp:
-            return
+        finally:
+            device.close()
 
         self.attrs[ATTR_LAST_SLIDE_READ] = dt.utcnow()
+        self.attrs[ATTR_SENEYE_DEVICE_TYPE] = device_type
 
         for sensor in SENSOR_TYPES:
 
             self.data[sensor] = getattr(resp, sensor, None)
 
-        _LOGGER.debug("Got Seneye data")
+        _LOGGER.("Got Seneye data")
