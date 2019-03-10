@@ -14,9 +14,7 @@ A proving ground for new compontents that I'm working on. The intention is to co
 
 Very early support for a range of aquarium lights. 
 
-More of a POC than anything right now. Based on top of one of a python modules I wrote, [AquaIPy](https://github.com/mcclown/AquaIPy). There is no documented API for AquaIllumination lights, so this has all had to be reverse engineered. Alpha quality component, definitely use at your own risk.
-
-_Path: light/aquaillumination.py_
+More of a POC than anything right now. Based on top of one of a python modules I wrote, [AquaIPy](https://github.com/mcclown/AquaIPy). There is no documented API for AquaIllumination lights, so this has all had to be reverse engineered. Alpha quality component, definitely use at your own risk._
 
 A few caveats:
 
@@ -76,8 +74,6 @@ Alpha quality component but low risk, as it's pretty simple. With some testing i
 * No support for re-newing new slides, the Seneye device will need to be plugged into a PC running Seneye Connect or a Seneye Web Server, when a slide needs to be activated (once every 30 days).
 * No data is synced to the cloud, so cloud alerts won't work either. You will need to setup appropriate alerting in Home-Assistant.
 
-_Path: sensor/seneye.py_
-
 Configuration couldn't be simpler.
 
 ```YAML
@@ -94,8 +90,6 @@ This API seems to only be available for enterprise customers currently but speak
 * Support for CO, CO<sub>2</sub>, NO<sub>2</sub>, O<sub>3</sub>, TVOC, Dust(PM2.5), Humidity and Air Pressure.
 * No support for Temperature yet, as there is a bug in the underlying python module.
 * Only updates from the API every 15 mins, data is cached by the pyuhooair implementation.
-
-_Path: sensor/uhooair.py_
 
 Configuration just needs email address and password:
 
