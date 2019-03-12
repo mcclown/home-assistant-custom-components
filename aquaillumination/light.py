@@ -112,7 +112,7 @@ class AquaIllumination(Light):
             # support is added.
             
             if val > 100:
-                color_pct[color] = 100
+                colors_pct[color] = 100
 
         colors_pct[self._channel] = brightness
 
