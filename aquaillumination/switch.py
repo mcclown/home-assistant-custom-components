@@ -5,52 +5,30 @@ import voluptuous as vol
 from homeassistant.components.switch import SwitchDevice, PLATFORM_SCHEMA
 from homeassistant.const import CONF_HOST, CONF_NAME
 import homeassistant.helpers.config_validation as cv
+from . import DATA_INDEX
 
-# Home Assistant depends on 3rd party packages for API specific code.
-REQUIREMENTS = ['https://github.com/mcclown/AquaIPy/archive/1.0.2.zip#aquaipy==1.0.2']
-
+DEPENDENCIES = ['aquaillumination']
 _LOGGER = logging.getLogger(__name__)
-
-# Validation of the user's configuration
-PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
-    vol.Required(CONF_HOST): cv.string,
-    vol.Required(CONF_NAME): cv.string
-})
 
 
 def setup_platform(hass, config, add_devices, discovery_info=None):
-    """Setup the AquaIllumination platform."""
+    """Setup the AquaIllumination switch platform."""
 
-    from aquaipy import AquaIPy
-    from aquaipy.error import FirmwareError, ConnError, MustBeParentError
+    if DATA_INDEX not in hass.data:
+        return False
 
-    host = config.get(CONF_HOST)
-    name = config.get(CONF_NAME)
+    device = hass.data[DATA_INDEX]
 
-    # Setup connection with devices
-    device = AquaIPy(name)
-
-    try:
-        device.connect(host)
-    except FirmwareError:
-        _LOGGER.error("Invalid firmware version for target device")
-        return
-    except ConnError:
-        _LOGGER.error("Unable to connect to specified device, please verify the host name")
-        return
-    except MustBeParentError:
-        _LOGGER.error("The specifed device must be the parent light, if paired. Please verify")
-
-    add_devices([AIAutomatedScheduleSwitch(device, name)])
+    add_devices([AIAutomatedScheduleSwitch(device)])
 
 
 class AIAutomatedScheduleSwitch(SwitchDevice):
     """Representation of AI light schedule switch"""
 
-    def __init__(self, device, parent_name):
+    def __init__(self, device):
         """Initialise the AI switch"""
         self._device = device
-        self._name = parent_name + ' scheduled mode'
+        self._name = self._device.name + ' scheduled mode'
         self._state = None
     
     @property

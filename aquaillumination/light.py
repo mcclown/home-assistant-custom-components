@@ -4,58 +4,36 @@ import voluptuous as vol
 
 # Import the device class from the component that you want to support
 from homeassistant.components.light import ( ATTR_BRIGHTNESS,
-    SUPPORT_BRIGHTNESS, Light, PLATFORM_SCHEMA, LIGHT_TURN_ON_SCHEMA,
+    SUPPORT_BRIGHTNESS, Light, LIGHT_TURN_ON_SCHEMA,
     VALID_BRIGHTNESS)
 from homeassistant.const import CONF_HOST, CONF_NAME
 import homeassistant.helpers.config_validation as cv
+from . import DATA_INDEX
 
-# Home Assistant depends on 3rd party packages for API specific code.
-REQUIREMENTS = ['https://github.com/mcclown/AquaIPy/archive/1.0.1.zip#aquaipy==1.0.1']
+DEPENDENCIES = ['aquaillumination']
 
 _LOGGER = logging.getLogger(__name__)
 
-# Validation of the user's configuration
-PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
-    vol.Required(CONF_HOST): cv.string,
-    vol.Required(CONF_NAME): cv.string
-})
-
 
 def setup_platform(hass, config, add_devices, discovery_info=None):
-    """Setup the AquaIllumination platform."""
+    """Setup the AquaIllumination light platform."""
 
-    from aquaipy import AquaIPy
-    from aquaipy.error import FirmwareError, ConnError, MustBeParentError
+    if DATA_INDEX not in hass.data:
+        return False
 
-    host = config.get(CONF_HOST)
-    name = config.get(CONF_NAME)
-
-    # Setup connection with devices
-    light = AquaIPy(name)
-
-    try:
-        light.connect(host)
-    except FirmwareError:
-        _LOGGER.error("Invalid firmware version for target device")
-        return
-    except ConnError:
-        _LOGGER.error("Unable to connect to specified device, please verify the host name")
-        return
-    except MustBeParentError:
-        _LOGGER.error("The specifed device must be the parent light, if paired. Please verify")
-
+    light = hass.data[DATA_INDEX]
     colors = light.get_colors()
 
-    add_devices(AquaIllumination(light, color, name) for color in colors)
+    add_devices(AquaIllumination(light, color) for color in colors)
 
 
 class AquaIllumination(Light):
     """Representation of an AquaIllumination light"""
 
-    def __init__(self, light, channel, parent_name):
+    def __init__(self, light, channel):
         """Initialise the AquaIllumination light"""
         self._light = light
-        self._name = parent_name + ' ' + channel.replace("_", " ")
+        self._name = self._light.name + ' ' + channel.replace("_", " ")
         self._state = None
         self._brightness = None
         self._channel = channel
