@@ -17,7 +17,7 @@ _LOGGER = logging.getLogger(__name__)
 # Validation of the user's configuration
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Required(CONF_HOST): cv.string,
-    vol.Optional(CONF_NAME): cv.string
+    vol.Required(CONF_NAME): cv.string
 })
 
 
@@ -28,7 +28,6 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
     from aquaipy.error import FirmwareError, ConnError, MustBeParentError
 
     host = config.get(CONF_HOST)
-    # If name isn't specified this fails to load. Need to fix this.
     name = config.get(CONF_NAME)
 
     # Setup connection with devices
@@ -56,7 +55,7 @@ class AquaIllumination(Light):
     def __init__(self, light, channel, parent_name):
         """Initialise the AquaIllumination light"""
         self._light = light
-        self._name = parent_name + ' ' + channel
+        self._name = parent_name + ' ' + channel.replace("_", " ")
         self._state = None
         self._brightness = None
         self._channel = channel
@@ -99,7 +98,7 @@ class AquaIllumination(Light):
 
 
     def turn_on(self, **kwargs):
-        """Turn all color channels to given percentage"""
+        """Turn color channel to given percentage"""
 
         brightness = (kwargs.get(ATTR_BRIGHTNESS, 255) / 255) * 100
         colors_pct = self._light.get_colors_brightness()
@@ -138,9 +137,7 @@ class AquaIllumination(Light):
         
         self._state = "off"
 
-        if sched_state:
-            self._state = 'schedule_mode'
-        elif brightness > 0:
+        if brightness > 0:
             self._state = 'on'
 
         self._brightness = (brightness / 100) * 255
