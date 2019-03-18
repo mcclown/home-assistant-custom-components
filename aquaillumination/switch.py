@@ -17,9 +17,7 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
     if DATA_INDEX not in hass.data:
         return False
 
-    device = hass.data[DATA_INDEX]
-
-    add_devices([AIAutomatedScheduleSwitch(device)])
+    add_devices(AIAutomatedScheduleSwitch(device) for host, device in hass.data[DATA_INDEX].items())
 
 
 class AIAutomatedScheduleSwitch(SwitchDevice):

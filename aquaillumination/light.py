@@ -21,10 +21,10 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
     if DATA_INDEX not in hass.data:
         return False
 
-    light = hass.data[DATA_INDEX]
-    colors = light.get_colors()
+    for host, device in hass.data[DATA_INDEX].items():
+        colors = device.get_colors()
 
-    add_devices(AquaIllumination(light, color) for color in colors)
+        add_devices(AquaIllumination(device, color) for color in colors)
 
 
 class AquaIllumination(Light):
