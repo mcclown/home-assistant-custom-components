@@ -2,7 +2,8 @@ import logging
 
 from homeassistant.const import DEVICE_CLASS_ILLUMINANCE 
 from homeassistant.helpers.entity import Entity
-from . import DATA_INDEX
+from homeassistant.util import dt
+from . import DATA_INDEX, ATTR_LAST_UPDATE, SCAN_INTERVAL
 
 DEPENDENCIES = ['aquaillumination']
 
@@ -17,7 +18,7 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
         return False
 
     for host, device in hass.data[DATA_INDEX].items():
-        colors = device.get_colors()
+        colors = device.raw_device.get_colors()
 
         add_entities(AquaIlluminationChannelBrightness(device, color) for color in colors)
 
@@ -71,12 +72,26 @@ class AquaIlluminationChannelBrightness(Entity):
 
         return self._unique_id
     
+    @property
+    def device_state_attributes(self):
+
+        return self._device.attr
+
+    @property
+    def available(self):
+        """Return if the device is available"""
+
+        if ATTR_LAST_UPDATE not in self.device_state_attributes:
+            return False
+
+        last_update = self.device_state_attributes[ATTR_LAST_UPDATE]
+
+        return (dt.utcnow() - last_update) < (2 * self._device.throttle)
+    
     def update(self):
         """Fetch new state data for this channel"""
+
+        self._device.async_update()
         
-        colors_pct = self._device.get_colors_brightness()
-        brightness = colors_pct[self._channel]
-        
+        brightness = self._device.colors_brightness[self._channel]
         self._state = float("{0:.2f}".format(brightness))
-
-

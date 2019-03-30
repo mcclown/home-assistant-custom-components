@@ -5,7 +5,8 @@ import voluptuous as vol
 from homeassistant.components.switch import SwitchDevice, PLATFORM_SCHEMA
 from homeassistant.const import CONF_HOST, CONF_NAME
 import homeassistant.helpers.config_validation as cv
-from . import DATA_INDEX
+from homeassistant.util import dt
+from . import DATA_INDEX, ATTR_LAST_UPDATE, SCAN_INTERVAL
 
 DEPENDENCIES = ['aquaillumination']
 _LOGGER = logging.getLogger(__name__)
@@ -55,19 +56,35 @@ class AIAutomatedScheduleSwitch(SwitchDevice):
             return "on"
         
         return "off"
+    
+    @property
+    def device_state_attributes(self):
+
+        return self._device.attr
+
+    @property
+    def available(self):
+        """Return if the device is available"""
+
+        if ATTR_LAST_UPDATE not in self.device_state_attributes:
+            return False
+
+        last_update = self.device_state_attributes[ATTR_LAST_UPDATE]
+
+        return (dt.utcnow() - last_update) < (3 * self._device.throttle)
 
     def turn_on(self, **kwargs):
         """Enable schedule mode"""
         
-        self._device.set_schedule_state(True)
+        self._device.raw_device.set_schedule_state(True)
 
     def turn_off(self):
         """Disable schedule mode"""
         
-        self._device.set_schedule_state(False)
+        self._device.raw_device.set_schedule_state(False)
 
     def update(self):
         """Fetch new state data for scheduled mode"""
-        
-        self._state = self._device.get_schedule_state()
 
+        self._device.async_update()
+        self._state = self._device.schedule_state

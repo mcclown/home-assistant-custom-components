@@ -1,16 +1,18 @@
 """The AquaIllumination Light component"""
+from datetime import timedelta
 import logging
 import voluptuous as vol
 
 from homeassistant.const import CONF_HOST, CONF_NAME
 from homeassistant.helpers import discovery
 import homeassistant.helpers.config_validation as cv
+from homeassistant.util import Throttle, dt
 
 
 REQUIREMENTS = ['AquaIPy==1.0.2']
+_LOGGER = logging.getLogger(__name__)
 
-LOGGER = logging.getLogger(__name__)
-
+ATTR_LAST_UPDATE = 'last_update'
 DOMAIN = 'aquaillumination'
 DATA_INDEX = "data_" + DOMAIN
 
@@ -24,16 +26,17 @@ CONFIG_SCHEMA = vol.Schema({
 }, extra=vol.ALLOW_EXTRA)
 
 DEVICE_TYPES = ['light', 'switch', 'sensor']
+SCAN_INTERVAL = timedelta(seconds=10)
 
 
-def setup(hass, hass_config):
+async def async_setup(hass, hass_config):
     """Setup the AquaIllumination component"""
 
     if DATA_INDEX not in hass.data:
         hass.data[DATA_INDEX] = {}
 
     for config in hass_config.get(DOMAIN, []):
-        _setup_ai_device(hass, hass_config, config)
+        await _async_setup_ai_device(hass, hass_config, config)
 
     for device in DEVICE_TYPES:
         hass.async_create_task(discovery.async_load_platform(
@@ -42,7 +45,7 @@ def setup(hass, hass_config):
     return True
 
 
-def _setup_ai_device(hass, hass_config, config):
+async def _async_setup_ai_device(hass, hass_config, config):
     """Setup an individual device"""
     from aquaipy import AquaIPy
     from aquaipy.error import FirmwareError, ConnError, MustBeParentError
@@ -54,18 +57,79 @@ def _setup_ai_device(hass, hass_config, config):
         return
 
     # Setup connection with devices
-    device = AquaIPy(name)
+    device = AIData(host, name, SCAN_INTERVAL)
+    
+    if device.connected:
+        device.async_update()
+        hass.data[DATA_INDEX][host] = device
 
-    try:
-        device.connect(host)
-    except FirmwareError:
-        _LOGGER.error("Invalid firmware version for target device")
-        return
-    except ConnError:
-        _LOGGER.error("Unable to connect to specified device, please verify the host name")
-        return
-    except MustBeParentError:
-        _LOGGER.error("The specifed device must be the parent light, if paired. Please verify")
-        return
 
-    hass.data[DATA_INDEX][host] = device
+class AIData:
+    """Class for handling data from AI devices and caching."""
+
+    def __init__(self, host, name, throttle):
+
+        from aquaipy import AquaIPy
+        from aquaipy.error import FirmwareError, ConnError, MustBeParentError
+
+        self.attr = {}
+        self._connected = False
+        self._device = AquaIPy(name)
+        self._t = throttle
+        self._colors_brightness = None
+        self._schedule_state = None
+
+        try:
+            self._device.connect(host)
+        except FirmwareError:
+            _LOGGER.error("Invalid firmware version for target device")
+            return
+        except ConnError:
+            _LOGGER.error("Unable to connect to specified device, please verify the host name")
+            return
+        except MustBeParentError:
+            _LOGGER.error("The specifed device must be the parent light, if paired. Please verify")
+            return
+
+        self._connected = True
+        self.async_update = Throttle(throttle)(self._update)
+
+    @property
+    def name(self):
+        return self._device.name
+
+    @property
+    def mac_addr(self):
+        return self._device.mac_addr
+    
+    @property
+    def connected(self):
+
+        return self._connected
+
+    @property
+    def colors_brightness(self):
+
+        return self._colors_brightness
+
+    @property
+    def raw_device(self):
+
+        return self._device
+
+    @property
+    def schedule_state(self):
+
+        return self._schedule_state
+
+    @property
+    def throttle(self):
+
+        return self._t
+
+    def _update(self):
+
+        self._colors_brightness = self._device.get_colors_brightness()
+        self._schedule_state = self._device.get_schedule_state()
+
+        self.attr[ATTR_LAST_UPDATE] = dt.utcnow()

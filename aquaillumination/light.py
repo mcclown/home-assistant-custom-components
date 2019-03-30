@@ -6,9 +6,10 @@ import voluptuous as vol
 from homeassistant.components.light import ( ATTR_BRIGHTNESS,
     SUPPORT_BRIGHTNESS, Light, LIGHT_TURN_ON_SCHEMA,
     VALID_BRIGHTNESS)
-from homeassistant.const import CONF_HOST, CONF_NAME
 import homeassistant.helpers.config_validation as cv
-from . import DATA_INDEX
+from homeassistant.util import dt
+
+from . import DATA_INDEX, ATTR_LAST_UPDATE, SCAN_INTERVAL
 
 DEPENDENCIES = ['aquaillumination']
 
@@ -22,7 +23,7 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
         return False
 
     for host, device in hass.data[DATA_INDEX].items():
-        colors = device.get_colors()
+        colors = device.raw_device.get_colors()
 
         add_devices(AquaIllumination(device, color) for color in colors)
 
@@ -74,12 +75,27 @@ class AquaIllumination(Light):
 
         return self._brightness
 
+    @property
+    def device_state_attributes(self):
+
+        return self._light.attr
+
+    @property
+    def available(self):
+        """Return if the device is available"""
+
+        if ATTR_LAST_UPDATE not in self.device_state_attributes:
+            return False
+
+        last_update = self.device_state_attributes[ATTR_LAST_UPDATE]
+
+        return (dt.utcnow() - last_update) < (3 * self._light.throttle)
 
     def turn_on(self, **kwargs):
         """Turn color channel to given percentage"""
 
         brightness = (kwargs.get(ATTR_BRIGHTNESS, 255) / 255) * 100
-        colors_pct = self._light.get_colors_brightness()
+        colors_pct = self._light.raw_device.get_colors_brightness()
 
         for color,val in colors_pct.items():
             
@@ -94,30 +110,25 @@ class AquaIllumination(Light):
         colors_pct[self._channel] = brightness
 
         _LOGGER.debug("Turn on result: " + str(colors_pct))
-        self._light.set_colors_brightness(colors_pct)
-
+        self._light.raw_device.set_colors_brightness(colors_pct)
 
     def turn_off(self):
         """Turn all color channels to 0%"""
 
-        colors_pct = self._light.get_colors_brightness()
+        colors_pct = self._light.raw_device.get_colors_brightness()
         colors_pct[self._channel] = 0
 
-        self._light.set_colors_brightness(colors_pct)
-
+        self._light.raw_device.set_colors_brightness(colors_pct)
     
     def update(self):
         """Fetch new state data for this light"""
         
-        sched_state = self._light.get_schedule_state()
-        colors_pct = self._light.get_colors_brightness()
-        brightness = colors_pct[self._channel]
+        self._light.async_update()
         
+        brightness = self._light.colors_brightness[self._channel]
         self._state = "off"
 
         if brightness > 0:
             self._state = 'on'
 
         self._brightness = (brightness / 100) * 255
-
-
