@@ -59,9 +59,8 @@ async def _async_setup_ai_device(hass, hass_config, config):
     # Setup connection with devices
     device = AIData(host, name, SCAN_INTERVAL)
     
-    if device.connected:
-        device.async_update()
-        hass.data[DATA_INDEX][host] = device
+    await device.async_update()
+    hass.data[DATA_INDEX][host] = device
 
 
 class AIData:
@@ -70,7 +69,6 @@ class AIData:
     def __init__(self, host, name, throttle):
 
         from aquaipy import AquaIPy
-        from aquaipy.error import FirmwareError, ConnError, MustBeParentError
 
         self.attr = {}
         self._connected = False
@@ -78,21 +76,9 @@ class AIData:
         self._t = throttle
         self._colors_brightness = None
         self._schedule_state = None
+        self._host = host
 
-        try:
-            self._device.connect(host)
-        except FirmwareError:
-            _LOGGER.error("Invalid firmware version for target device")
-            return
-        except ConnError:
-            _LOGGER.error("Unable to connect to specified device, please verify the host name")
-            return
-        except MustBeParentError:
-            _LOGGER.error("The specifed device must be the parent light, if paired. Please verify")
-            return
-
-        self._connected = True
-        self.async_update = Throttle(throttle)(self._update)
+        self.async_update = Throttle(throttle)(self._async_update)
 
     @property
     def name(self):
@@ -127,8 +113,25 @@ class AIData:
 
         return self._t
 
-    def _update(self):
+    async def _async_update(self):
 
+        if not self.connected:
+            from aquaipy.error import FirmwareError, ConnError, MustBeParentError
+            
+            try:
+                self._device.connect(self._host)
+            except FirmwareError:
+                _LOGGER.error("Invalid firmware version for target device")
+                return
+            except ConnError:
+                _LOGGER.error("Unable to connect to specified device, please verify the host name")
+                return
+            except MustBeParentError:
+                _LOGGER.error("The specifed device must be the parent light, if paired. Please verify")
+                return
+
+            self._connected = True
+            
         self._colors_brightness = self._device.get_colors_brightness()
         self._schedule_state = self._device.get_schedule_state()
 

@@ -4,6 +4,7 @@ import voluptuous as vol
 # Import the device class from the component that you want to support
 from homeassistant.components.switch import SwitchDevice, PLATFORM_SCHEMA
 from homeassistant.const import CONF_HOST, CONF_NAME
+from homeassistant.exceptions import PlatformNotReady
 import homeassistant.helpers.config_validation as cv
 from homeassistant.util import dt
 from . import DATA_INDEX, ATTR_LAST_UPDATE, SCAN_INTERVAL
@@ -12,13 +13,22 @@ DEPENDENCIES = ['aquaillumination']
 _LOGGER = logging.getLogger(__name__)
 
 
-def setup_platform(hass, config, add_devices, discovery_info=None):
+async def async_setup_platform(hass, config, add_devices, discovery_info=None):
     """Setup the AquaIllumination switch platform."""
 
     if DATA_INDEX not in hass.data:
         return False
 
-    add_devices(AIAutomatedScheduleSwitch(device) for host, device in hass.data[DATA_INDEX].items())
+    all_devices = []
+
+    for host, device in hass.data[DATA_INDEX].items():
+
+        if not device.connected:
+            raise PlatformNotReady
+
+        all_devices.append(AIAutomatedScheduleSwitch(device))
+
+    add_devices(all_devices)
 
 
 class AIAutomatedScheduleSwitch(SwitchDevice):
@@ -83,8 +93,8 @@ class AIAutomatedScheduleSwitch(SwitchDevice):
         
         self._device.raw_device.set_schedule_state(False)
 
-    def update(self):
+    async def async_update(self):
         """Fetch new state data for scheduled mode"""
 
-        self._device.async_update()
+        await self._device.async_update()
         self._state = self._device.schedule_state

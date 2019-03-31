@@ -1,6 +1,7 @@
 import logging
 
-from homeassistant.const import DEVICE_CLASS_ILLUMINANCE 
+from homeassistant.const import DEVICE_CLASS_ILLUMINANCE
+from homeassistant.exceptions import PlatformNotReady
 from homeassistant.helpers.entity import Entity
 from homeassistant.util import dt
 from . import DATA_INDEX, ATTR_LAST_UPDATE, SCAN_INTERVAL
@@ -11,16 +12,25 @@ _LOGGER = logging.getLogger(__name__)
 
 UNIT_PERCENT = '%'
 
-def setup_platform(hass, config, add_entities, discovery_info=None):
+async def async_setup_platform(hass, config, add_entities, discovery_info=None):
     """Setup the AquaIllumination light platform."""
 
     if DATA_INDEX not in hass.data:
         return False
 
+    all_entities = []
+
     for host, device in hass.data[DATA_INDEX].items():
+
+        if not device.connected:
+            raise PlatformNotReady
+
         colors = device.raw_device.get_colors()
 
-        add_entities(AquaIlluminationChannelBrightness(device, color) for color in colors)
+        for color in colors:
+            all_entities.append(AquaIlluminationChannelBrightness(device, color))
+
+    add_entities(all_entities)
 
 
 class AquaIlluminationChannelBrightness(Entity):
@@ -88,10 +98,10 @@ class AquaIlluminationChannelBrightness(Entity):
 
         return (dt.utcnow() - last_update) < (2 * self._device.throttle)
     
-    def update(self):
+    async def async_update(self):
         """Fetch new state data for this channel"""
 
-        self._device.async_update()
+        await self._device.async_update()
         
         brightness = self._device.colors_brightness[self._channel]
         self._state = float("{0:.2f}".format(brightness))

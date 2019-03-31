@@ -6,6 +6,7 @@ import voluptuous as vol
 from homeassistant.components.light import ( ATTR_BRIGHTNESS,
     SUPPORT_BRIGHTNESS, Light, LIGHT_TURN_ON_SCHEMA,
     VALID_BRIGHTNESS)
+from homeassistant.exceptions import PlatformNotReady
 import homeassistant.helpers.config_validation as cv
 from homeassistant.util import dt
 
@@ -16,16 +17,25 @@ DEPENDENCIES = ['aquaillumination']
 _LOGGER = logging.getLogger(__name__)
 
 
-def setup_platform(hass, config, add_devices, discovery_info=None):
+async def async_setup_platform(hass, config, add_devices, discovery_info=None):
     """Setup the AquaIllumination light platform."""
 
     if DATA_INDEX not in hass.data:
         return False
 
+    all_devices = []
+
     for host, device in hass.data[DATA_INDEX].items():
+
+        if not device.connected:
+            raise PlatformNotReady
+
         colors = device.raw_device.get_colors()
 
-        add_devices(AquaIllumination(device, color) for color in colors)
+        for color in colors:
+            all_devices.append(AquaIllumination(device, color))
+
+    add_devices(all_devices)
 
 
 class AquaIllumination(Light):
@@ -120,10 +130,10 @@ class AquaIllumination(Light):
 
         self._light.raw_device.set_colors_brightness(colors_pct)
     
-    def update(self):
+    async def async_update(self):
         """Fetch new state data for this light"""
         
-        self._light.async_update()
+        await self._light.async_update()
         
         brightness = self._light.colors_brightness[self._channel]
         self._state = "off"
