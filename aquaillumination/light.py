@@ -48,6 +48,7 @@ class AquaIllumination(Light):
         self._state = None
         self._brightness = None
         self._channel = channel
+        self._unique_id = "{0}-{1}".format(self._light.mac_addr, self._channel)
     
     @property
     def name(self):
@@ -100,6 +101,11 @@ class AquaIllumination(Light):
         last_update = self.device_state_attributes[ATTR_LAST_UPDATE]
 
         return (dt.utcnow() - last_update) < (3 * self._light.throttle)
+
+    @property
+    def unique_id(self):
+
+        return self._unique_id
 
     def turn_on(self, **kwargs):
         """Turn color channel to given percentage"""

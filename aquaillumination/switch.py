@@ -83,6 +83,11 @@ class AIAutomatedScheduleSwitch(SwitchDevice):
 
         return (dt.utcnow() - last_update) < (3 * self._device.throttle)
 
+    @property
+    def unique_id(self):
+
+        return self._device.mac_addr
+
     def turn_on(self, **kwargs):
         """Enable schedule mode"""
         
