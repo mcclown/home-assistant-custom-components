@@ -48,7 +48,6 @@ async def async_setup(hass, hass_config):
 async def _async_setup_ai_device(hass, hass_config, config):
     """Setup an individual device"""
     from aquaipy import AquaIPy
-    from aquaipy.error import FirmwareError, ConnError, MustBeParentError
 
     host = config.get(CONF_HOST)
     name = config.get(CONF_NAME)
