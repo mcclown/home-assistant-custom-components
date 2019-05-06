@@ -1,0 +1,8 @@
+{
+  "domain": "seneye",
+  "name": "Seneye",
+  "documentation": "https://github.com/mcclown/home-assistant-custom-components/blob/master/README.md#seneye-water-sensors",
+  "dependencies": [],
+  "codeowners": ["@mcclown"],
+  "requirements": ["pyseneye==0.0.1"]
+}

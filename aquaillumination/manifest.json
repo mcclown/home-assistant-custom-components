@@ -1,0 +1,8 @@
+{
+  "domain": "aquaillumination",
+  "name": "AquaIllumination",
+  "documentation": "https://github.com/mcclown/home-assistant-custom-components/blob/master/README.md#aquaillumination-lights",
+  "dependencies": [],
+  "codeowners": ["@mcclown"],
+  "requirements": ["AquaIPy==1.0.2"]
+}

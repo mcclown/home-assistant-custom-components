@@ -9,9 +9,6 @@ from homeassistant.components.light import ( ATTR_BRIGHTNESS,
 from homeassistant.const import CONF_HOST, CONF_NAME
 import homeassistant.helpers.config_validation as cv
 
-# Home Assistant depends on 3rd party packages for API specific code.
-REQUIREMENTS = ['https://github.com/mcclown/AquaIPy/archive/1.0.1.zip#aquaipy==1.0.1']
-
 _LOGGER = logging.getLogger(__name__)
 
 # Validation of the user's configuration

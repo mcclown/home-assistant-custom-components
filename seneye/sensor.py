@@ -15,8 +15,6 @@ from homeassistant.exceptions import PlatformNotReady
 from homeassistant.helpers.entity import Entity
 from homeassistant.util import Throttle, dt
 
-REQUIREMENTS = ['https://github.com/mcclown/pyseneye/archive/0.0.1.zip#pyseneye==0.0.1']
-
 _LOGGER = logging.getLogger(__name__)
 
 ATTR_TIMESTAMP = 'timestamp'
