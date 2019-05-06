@@ -6,8 +6,6 @@ from homeassistant.helpers.entity import Entity
 from homeassistant.util import dt
 from . import DATA_INDEX, ATTR_LAST_UPDATE, SCAN_INTERVAL
 
-DEPENDENCIES = ['aquaillumination']
-
 _LOGGER = logging.getLogger(__name__)
 
 UNIT_PERCENT = '%'

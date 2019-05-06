@@ -9,7 +9,6 @@ import homeassistant.helpers.config_validation as cv
 from homeassistant.util import dt
 from . import DATA_INDEX, ATTR_LAST_UPDATE, SCAN_INTERVAL
 
-DEPENDENCIES = ['aquaillumination']
 _LOGGER = logging.getLogger(__name__)
 
 
