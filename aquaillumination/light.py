@@ -28,7 +28,7 @@ async def async_setup_platform(hass, config, add_devices, discovery_info=None):
         if not device.connected:
             raise PlatformNotReady
 
-        colors = device.raw_device.get_colors()
+        colors = await device.raw_device.async_get_colors()
 
         for color in colors:
             all_devices.append(AquaIllumination(device, color))
@@ -105,11 +105,11 @@ class AquaIllumination(Light):
 
         return self._unique_id
 
-    def turn_on(self, **kwargs):
+    async def async_turn_on(self, **kwargs):
         """Turn color channel to given percentage"""
 
         brightness = (kwargs.get(ATTR_BRIGHTNESS, 255) / 255) * 100
-        colors_pct = self._light.raw_device.get_colors_brightness()
+        colors_pct = await self._light.raw_device.async_get_colors_brightness()
 
         for color,val in colors_pct.items():
             
@@ -124,15 +124,15 @@ class AquaIllumination(Light):
         colors_pct[self._channel] = brightness
 
         _LOGGER.debug("Turn on result: " + str(colors_pct))
-        self._light.raw_device.set_colors_brightness(colors_pct)
+        await self._light.raw_device.async_set_colors_brightness(colors_pct)
 
-    def turn_off(self):
+    async def turn_off(self):
         """Turn all color channels to 0%"""
 
-        colors_pct = self._light.raw_device.get_colors_brightness()
+        colors_pct = await self._light.raw_device.async_get_colors_brightness()
         colors_pct[self._channel] = 0
 
-        self._light.raw_device.set_colors_brightness(colors_pct)
+        await self._light.raw_device.async_set_colors_brightness(colors_pct)
     
     async def async_update(self):
         """Fetch new state data for this light"""

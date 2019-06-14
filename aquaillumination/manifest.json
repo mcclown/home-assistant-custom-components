@@ -4,5 +4,5 @@
   "documentation": "https://github.com/mcclown/home-assistant-custom-components/blob/master/README.md#aquaillumination-lights",
   "dependencies": [],
   "codeowners": ["@mcclown"],
-  "requirements": ["AquaIPy==1.0.2"]
+  "requirements": ["AquaIPy==2.0.1"]
 }

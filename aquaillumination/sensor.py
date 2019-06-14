@@ -23,7 +23,7 @@ async def async_setup_platform(hass, config, add_entities, discovery_info=None):
         if not device.connected:
             raise PlatformNotReady
 
-        colors = device.raw_device.get_colors()
+        colors = await device.raw_device.async_get_colors()
 
         for color in colors:
             all_entities.append(AquaIlluminationChannelBrightness(device, color))

@@ -9,7 +9,7 @@ import homeassistant.helpers.config_validation as cv
 from homeassistant.util import Throttle, dt
 
 
-REQUIREMENTS = ['AquaIPy==1.0.2']
+REQUIREMENTS = ['AquaIPy==2.0.1']
 _LOGGER = logging.getLogger(__name__)
 
 ATTR_LAST_UPDATE = 'last_update'
@@ -47,7 +47,6 @@ async def async_setup(hass, hass_config):
 
 async def _async_setup_ai_device(hass, hass_config, config):
     """Setup an individual device"""
-    from aquaipy import AquaIPy
 
     host = config.get(CONF_HOST)
     name = config.get(CONF_NAME)
@@ -118,7 +117,7 @@ class AIData:
             from aquaipy.error import FirmwareError, ConnError, MustBeParentError
             
             try:
-                self._device.connect(self._host)
+                await self._device.async_connect(self._host)
             except FirmwareError:
                 _LOGGER.error("Invalid firmware version for target device")
                 return
@@ -131,7 +130,7 @@ class AIData:
 
             self._connected = True
             
-        self._colors_brightness = self._device.get_colors_brightness()
-        self._schedule_state = self._device.get_schedule_state()
+        self._colors_brightness = await self._device.async_get_colors_brightness()
+        self._schedule_state = await self._device.async_get_schedule_state()
 
         self.attr[ATTR_LAST_UPDATE] = dt.utcnow()
