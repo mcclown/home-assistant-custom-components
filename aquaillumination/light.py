@@ -46,7 +46,7 @@ class AquaIllumination(Light):
         self._state = None
         self._brightness = None
         self._channel = channel
-        self._unique_id = "{0}-{1}".format(self._light.mac_addr, self._channel)
+        self._unique_id = "{0}_{1}_light".format(self._light.mac_addr, self._channel)
     
     @property
     def name(self):

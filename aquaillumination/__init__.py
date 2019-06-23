@@ -38,9 +38,9 @@ async def async_setup(hass, hass_config):
     for config in hass_config.get(DOMAIN, []):
         await _async_setup_ai_device(hass, hass_config, config)
 
-        for device in DEVICE_TYPES:
-            hass.async_create_task(discovery.async_load_platform(
-                hass, device, DOMAIN, config, hass_config))
+    for device in DEVICE_TYPES:
+        hass.async_create_task(discovery.async_load_platform(
+            hass, device, DOMAIN, config, hass_config))
 
     return True
 

@@ -42,7 +42,7 @@ class AquaIlluminationChannelBrightness(Entity):
                 channel.replace('_', ' '))
         self._state = None
         self._channel = channel
-        self._unique_id = "{0}_{1}".format(self._device.mac_addr, channel) 
+        self._unique_id = "{0}_{1}_sensor".format(self._device.mac_addr, channel) 
     
     @property
     def name(self):
