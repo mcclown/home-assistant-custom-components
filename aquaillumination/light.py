@@ -4,59 +4,49 @@ import voluptuous as vol
 
 # Import the device class from the component that you want to support
 from homeassistant.components.light import ( ATTR_BRIGHTNESS,
-    SUPPORT_BRIGHTNESS, Light, PLATFORM_SCHEMA, LIGHT_TURN_ON_SCHEMA,
+    SUPPORT_BRIGHTNESS, Light, LIGHT_TURN_ON_SCHEMA,
     VALID_BRIGHTNESS)
-from homeassistant.const import CONF_HOST, CONF_NAME
+from homeassistant.exceptions import PlatformNotReady
 import homeassistant.helpers.config_validation as cv
+from homeassistant.util import dt
+
+from . import DATA_INDEX, ATTR_LAST_UPDATE, SCAN_INTERVAL
 
 _LOGGER = logging.getLogger(__name__)
 
-# Validation of the user's configuration
-PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
-    vol.Required(CONF_HOST): cv.string,
-    vol.Optional(CONF_NAME): cv.string
-})
 
+async def async_setup_platform(hass, config, add_devices, discovery_info=None):
+    """Setup the AquaIllumination light platform."""
 
-def setup_platform(hass, config, add_devices, discovery_info=None):
-    """Setup the AquaIllumination platform."""
+    if DATA_INDEX not in hass.data:
+        return False
 
-    from aquaipy import AquaIPy
-    from aquaipy.error import FirmwareError, ConnError, MustBeParentError
+    all_devices = []
 
-    host = config.get(CONF_HOST)
-    # If name isn't specified this fails to load. Need to fix this.
-    name = config.get(CONF_NAME)
+    for host, device in hass.data[DATA_INDEX].items():
 
-    # Setup connection with devices
-    light = AquaIPy(name)
+        if not device.connected:
+            raise PlatformNotReady
 
-    try:
-        light.connect(host)
-    except FirmwareError:
-        _LOGGER.error("Invalid firmware version for target device")
-        return
-    except ConnError:
-        _LOGGER.error("Unable to connect to specified device, please verify the host name")
-        return
-    except MustBeParentError:
-        _LOGGER.error("The specifed device must be the parent light, if paired. Please verify")
+        colors = await device.raw_device.async_get_colors()
 
-    colors = light.get_colors()
+        for color in colors:
+            all_devices.append(AquaIllumination(device, color))
 
-    add_devices(AquaIllumination(light, color, name) for color in colors)
+    add_devices(all_devices)
 
 
 class AquaIllumination(Light):
     """Representation of an AquaIllumination light"""
 
-    def __init__(self, light, channel, parent_name):
+    def __init__(self, light, channel):
         """Initialise the AquaIllumination light"""
         self._light = light
-        self._name = parent_name + ' ' + channel
+        self._name = self._light.name + ' ' + channel.replace("_", " ")
         self._state = None
         self._brightness = None
         self._channel = channel
+        self._unique_id = "{0}_{1}_light".format(self._light.mac_addr, self._channel)
     
     @property
     def name(self):
@@ -94,12 +84,32 @@ class AquaIllumination(Light):
 
         return self._brightness
 
+    @property
+    def device_state_attributes(self):
 
-    def turn_on(self, **kwargs):
-        """Turn all color channels to given percentage"""
+        return self._light.attr
+
+    @property
+    def available(self):
+        """Return if the device is available"""
+
+        if ATTR_LAST_UPDATE not in self.device_state_attributes:
+            return False
+
+        last_update = self.device_state_attributes[ATTR_LAST_UPDATE]
+
+        return (dt.utcnow() - last_update) < (3 * self._light.throttle)
+
+    @property
+    def unique_id(self):
+
+        return self._unique_id
+
+    async def async_turn_on(self, **kwargs):
+        """Turn color channel to given percentage"""
 
         brightness = (kwargs.get(ATTR_BRIGHTNESS, 255) / 255) * 100
-        colors_pct = self._light.get_colors_brightness()
+        colors_pct = await self._light.raw_device.async_get_colors_brightness()
 
         for color,val in colors_pct.items():
             
@@ -114,32 +124,25 @@ class AquaIllumination(Light):
         colors_pct[self._channel] = brightness
 
         _LOGGER.debug("Turn on result: " + str(colors_pct))
-        self._light.set_colors_brightness(colors_pct)
+        await self._light.raw_device.async_set_colors_brightness(colors_pct)
 
-
-    def turn_off(self):
+    async def turn_off(self):
         """Turn all color channels to 0%"""
 
-        colors_pct = self._light.get_colors_brightness()
+        colors_pct = await self._light.raw_device.async_get_colors_brightness()
         colors_pct[self._channel] = 0
 
-        self._light.set_colors_brightness(colors_pct)
-
+        await self._light.raw_device.async_set_colors_brightness(colors_pct)
     
-    def update(self):
+    async def async_update(self):
         """Fetch new state data for this light"""
         
-        sched_state = self._light.get_schedule_state()
-        colors_pct = self._light.get_colors_brightness()
-        brightness = colors_pct[self._channel]
+        await self._light.async_update()
         
+        brightness = self._light.colors_brightness[self._channel]
         self._state = "off"
 
-        if sched_state:
-            self._state = 'schedule_mode'
-        elif brightness > 0:
+        if brightness > 0:
             self._state = 'on'
 
         self._brightness = (brightness / 100) * 255
-
-
